@@ -6,11 +6,18 @@ import moment from 'moment';
 import FileUitility from '../utilities/FileUitility';
 import User from '../models/UserModel';
 import UserService from '../services/UserService';
+import Area from '../models/AreaModel';
+import AreaService from '../services/AreaService';
+import DeviceService from '../services/DeviceService';
 
 /** */
 let LocalStrategy = require("passport-local").Strategy;
-var userService = new UserService();
-var fileUitility = new FileUitility();
+let userService = new UserService();
+let fileUitility = new FileUitility();
+let areaService=new AreaService();
+let deviceService =new DeviceService();
+
+
 let router = express.Router();
 
 /**
@@ -120,8 +127,146 @@ router.post("/private/users/updateProfile", isLoggedIn, async (req, res) => {
 });
 
 /**
- * private/room
+ * private/area
  */
+router.get("/private/area/get_all_by_user_id", isLoggedIn, async (req, res) => {
+	let list = await areaService.getAllByUserID((req.session.user).username);
+	//console.log("xxxxxxx="+JSON.stringify(list));
+	res.render("dashboard/areas/area_list", { title: "Area List", areas: list });
+});
+
+router.post("/private/area/insert", isLoggedIn, async (req, res) => {
+	let flag = req.files.image;
+	if (!flag) {
+		let name = req.body.name;
+		let description = req.body.description;
+		let created_date = new Date();
+		let user_id = (req.session.user).username;
+		let enabled = req.body.enabled;
+		let image = "no_image.jpg";
+		let priority = req.body.priority;
+
+		/**validation errors */
+		req.checkBody('name',"Name is required.").notEmpty();
+		let errors=req.validationErrors();
+		if(errors){
+			req.flash('error_message', 'Data input is invalid!!!');
+			res.redirect("/private/area/get_all_by_user_id");
+		}else{
+
+			let newArea = new Area(null,name,description,image,created_date,user_id,enabled,priority);
+			try {
+				let result = await areaService.insert(newArea);
+				res.redirect("/private/area/get_all_by_user_id");
+			} catch (error) {
+				req.flash('error_message', 'You have not changed fail');
+				res.redirect("/private/area/get_all_by_user_id");
+			}
+		}
+		
+	} else {
+		let name = req.body.name;
+		let description = req.body.description;
+		let created_date = new Date();
+		let user_id = (req.session.user).username;
+		let enabled = req.body.enabled;
+		let fileUpload = req.files.image;
+		let image_name = Date.now() + fileUpload.name;
+		let image = image_name
+		let priority = req.body.priority;
+
+		/**validation errors */
+		req.checkBody('name',"Name is required.").notEmpty();
+		let errors=req.validationErrors();
+		if(errors){
+			req.flash('error_message', 'Data input is invalid!!!');
+			res.redirect("/private/area/get_all_by_user_id");
+		}else{
+			let newArea = new Area(null,name,description,image,created_date,user_id,enabled,priority);
+			try {
+				await fileUitility.uploadFile(fileUpload, image);
+				let result = await areaService.insert(newArea);
+				res.redirect("/private/area/get_all_by_user_id");
+			} catch (error) {
+				req.flash('error_message', 'You have not changed fail');
+				res.redirect("/private/area/get_all_by_user_id");
+			}
+		}		
+	}
+
+});
+
+router.get("/private/area/delete/:area_id", isLoggedIn, async (req, res) => {
+	try {
+		let cate = await areaService.delete(req.params.area_id);
+		res.redirect("/private/area/get_all_by_user_id");
+	} catch (error) {
+		req.flash('error_message', 'Delete fail');
+		res.redirect("/private/area/get_all_by_user_id");
+	}
+
+});
+
+router.get("/private/area/update/:area_id", isLoggedIn, async (req, res) => {
+	try {
+		let area = await areaService.getByID(req.params.area_id);
+		res.render("dashboard/areas/area_update", { title: "Update Area", area: area[0] });
+	} catch (error) {
+		req.flash('error_message', 'update fail');
+		res.redirect("/private/area/get_all_by_user_id");
+	}
+});
+
+router.post("/private/area/update/:area_id", isLoggedIn, async (req, res) => {
+	let flag = req.files.image;
+	if (!flag) {
+		let name = req.body.name;
+		let description = req.body.description;
+		let created_date = new Date();		
+		let user_id = (req.session.user).username;		
+		let enabled = req.body.enabled;
+		let priority = req.body.priority;
+
+		try {
+			let oldArea = await areaService.getByID(req.params.area_id);
+			let newArea = new Area(oldArea[0].id,name,description,oldArea[0].image,created_date,user_id,enabled,priority);
+			let result = areaService.update(newArea);
+			res.redirect("/private/area/get_all_by_user_id");
+		} catch (error) {
+			req.flash('error_message', 'You have not changed fail');
+			res.redirect("/private/area/get_all_by_user_id");
+		}
+	} else {
+		let name = req.body.name;
+		let description = req.body.description;
+		let created_date = new Date();		
+		let user_id = (req.session.user).username;		
+		let enabled = req.body.enabled;
+		let priority = req.body.priority;
+		let fileUpload = req.files.image;
+		let image_name = Date.now() + fileUpload.name;
+		//let image_extension = fileUpload.mimetype.split('/')[1];
+		let image = image_name;	
+
+		let newArea = new Area(req.params.area_id,name,description,image,created_date,user_id,enabled,priority);
+		try {
+			await fileUitility.uploadFile(fileUpload, image);
+			let result = areaService.update(newArea);
+			res.redirect("/private/area/get_all_by_user_id");
+		} catch (error) {
+			req.flash('error_message', 'You have not changed fail');
+			res.redirect("/private/area/get_all_by_user_id");
+		}
+	}
+
+});
+
+router.get("/private/device/get_all_by_area_id/:area_id", isLoggedIn, async (req, res) => {
+	let list = await deviceService.getAllByAreaIDAndUserID(req.params.area_id,(req.session.user).username);
+	let area = await areaService.getByID(req.params.area_id);
+	/* console.log("xxxxxxx="+JSON.stringify(list)); */
+	res.render("dashboard/devices/device_list", { title: "Device List", devices: list ,area:area});
+});
 
  /**
  * private/devices

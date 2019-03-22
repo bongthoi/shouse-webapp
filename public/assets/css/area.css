@@ -1,0 +1,15 @@
+.category-img {
+    width: 20px;
+    height: 20px;
+}
+
+.area-image {
+    background-image: url("/assets/upload/images/area3.jpg");
+    background-color: #cccccc;
+    height: 1000px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    position: relative;
+  }
+  

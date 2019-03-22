@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs';
 /** */
 import mysqldb_connection from '../utilities/mysqldb_connection';
-import Seller from '../models/UserModel';
 
 /** */
 class UserRepo {
